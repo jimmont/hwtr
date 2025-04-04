@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HWT, Hwtr - HMAC Web Token Intro</title>
+<style>
+:root {
+	--ff: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+
+	--warm-gray-50: #fafaf9;
+	--warm-gray-100: #f5f5f4;
+	--warm-gray-200: #e7e5e4;
+	--warm-gray-300: #d6d3d1;
+	--warm-gray-400: #a8a29e;
+	--warm-gray-500: #78716c;
+	--warm-gray-600: #57534e;
+	--warm-gray-700: #44403c;
+	--warm-gray-800: #292524;
+	--warm-gray-900: #1c1917;
+	
+	--cat-yellow: #FFCC00;
+	--cat-yellow-light: #FFE066;
+	--cat-yellow-lighter: #FFF5CC;
+	--cat-yellow-dark: #E6B800;
+	--cat-yellow-darker: #CC9900;
+	
+	--bg-color: var(--warm-gray-100);
+	--card-bg: #fff;
+	--text-color: var(--warm-gray-900);
+	--primary-color: var(--cat-yellow-dark);
+	--secondary-color: var(--warm-gray-600);
+	--border-color: var(--warm-gray-300);
+	--input-bg: #fff;
+	--error-color: #b91c1c;
+	--success-color: #15803d;
+
+	--featbg: var(--cat-yellow-lighter);
+	--featfg: var(--warm-gray-900);
+
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg-color: var(--warm-gray-900);
+		--card-bg: var(--warm-gray-800);
+		--text-color: var(--warm-gray-100);
+		--primary-color: var(--cat-yellow);
+		--secondary-color: var(--warm-gray-400);
+		--border-color: var(--warm-gray-700);
+		--input-bg: var(--warm-gray-700);
+
+		--featbg: var(--cat-yellow-dark);
+	}
+}
+body {
+	font-family: var(--ff);
+	line-height: 1.6;
+	background-color: var(--bg-color);
+	color: var(--text-color);
+}
+h1, h2, h3, h4, h5, h6{
+	color: var(--text-color);
+	font-size: 1rem;
+	margin: 0.5em 0 0.5em 0;
+	font-weight:bold;
+	line-height: 1;
+}
+h1, h2{
+	color: var(--primary-color);
+	font-size: 1.8rem;
+}
+h5, h6{
+	font-size: 0.7rem;
+}
+
+p, ul{
+	margin-block: 0 1em;
+	max-width:40em;
+}
+[feat] {
+	list-style-type: none;
+	padding: 0;
+}
+[feat] li {
+	padding: 0.4rem 1rem;
+	font-weight: 500;
+}
+.loading {
+	display: inline-block;
+	width: 1rem;
+	height: 1rem;
+	border: 2px solid rgba(0, 0, 0, 0.1);
+	border-left-color: var(--primary-color);
+	border-radius: 50%;
+	animation: rotate 1s linear infinite;
+	vertical-align: middle;
+	margin-left: 0.5rem;
+}
+
+@keyframes rotate {
+	to { transform: rotate(360deg); }
+}
+
+main{
+	padding: 1rem;
+}
+footer {
+	margin-top: 1rem;
+	padding: 1rem;
+	border-top: thin solid var(--border-color);
+	color: var(--secondary-color);
+	font-size: 1rem;
+}
+
+a {
+	color: var(--primary-color);
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+main{
+	max-inline-size: min(100ch, 95vw);
+	margin-inline:auto;
+}
+[intro], [formats]{
+	display:flex;
+	flex-direction:row;
+	justify-content: start;
+	align-items: baseline;
+	margin: 0 0 1rem 0;
+	gap: 1rem;
+}
+[intro] > *{
+	flex: 1 1 0;
+}
+[formats] > div{
+	flex: 1 1 0;
+}
+code[example]{
+	display: inline-block;
+	padding: 0.2em;
+	line-break: anywhere;
+}
+@media (max-width: 768px) {
+	[intro], [formats], [demo]{flex-direction:column;}
+	[feat] li{padding-inline-start: 0;}
+}
+</style>
+</head>
+<body>
+
+<main>
+<header>
+<h1>Hwtr - a library for making HMAC Web Tokens (HWT)</h1>
+</header>
+<section intro>
+	<div>
+	<p> Hwtr generates compact, secure HMAC Web Tokens (HWTs) that are 13-40% smaller than equivalent JWTs, with native support for modern JavaScript features, hidden claims and key rotation for enhanced security.</p>
+	</div>
+	
+	<ul feat>
+		<li>⏱️ Fast performance with minimal overhead</li>
+		<li>🏷️ HWTs are 13% to 40% smaller than JWTs</li>
+		<li>📦 Complete package, no external dependencies</li>
+		<li>🔒 HMAC-based signatures with SHA-256/384/512</li>
+		<li>📄 Hidden claims for enhanced security</li>
+		<li>🔑 Key rotation support</li>
+		<li>🌍 Works in Node.js, Deno, Cloudflare, modern browsers (with ESM + crypto support)</li>
+		<li>🛡️ Licensed under Apache-2.0, allowing safe commercial use with explicit patent protection</li>
+		<li>🌐 Native support for Sets, Maps, Dates, BigInt, TypedArrays and ArrayBuffers</li>
+		<li>🛠️ Configurable and extensible, for smaller tokens, error handling, etc</li>
+		<li>🔍 HWT tokens look like: <code example>hwt.signature.key-id.expires.format.payload</code>
+			<br><code example></code>
+		</li>
+		<li>📓 <a href="./README.md">View README</a>
+		</li>
+	</ul>
+
+</section>
+
+<section demo>
+<h2>Token Demo</h2>
+<token-input>
+<h3>Token Input</h3>
+</token-input>
+
+<token-output>
+	<h3>Token Output</h3>
+</token-output>
+</section>
+
+<section id=formats>
+<h2>Token Formats</h2>
+<p> Hwtr supports multiple serialization formats for HWT token payloads, each with different capabilities and characteristics:
+</p>
+	
+<section formats>
+<div>
+<h4>JSON Format (j)</h4>
+<p>The default format using standard JSON encoding.</p>
+<ul>
+	<li>Fast encoding/decoding</li>
+	<li>Support for basic data types</li>
+	<li>Excellent compatibility</li>
+	<li>Limited to JSON-serializable types</li>
+</ul>
+</div>
+
+<div>
+<h4>JSON Extended Format (jx)</h4>
+<p>Enhanced JSON encoding with support for complex JavaScript types:</p>
+<ul>
+	<li>Date objects</li>
+	<li>Map and Set collections</li>
+	<li>BigInt values</li>
+	<li>TypedArray and ArrayBuffer</li>
+	<li>Preserved type information</li>
+</ul>
+</div>
+
+<div>
+<h4>Custom Formats</h4>
+<p>HWT supports custom payload data handling through its format+codec system. For example the included JSON and JSON extended formats abbreviated 'j' and 'jx'. Demonstration examples of 3rd party CBOR and MessagePack codecs, registered as formats 'cb' and 'mp' are profiled below.</p>
+<ul>
+	<li>CBOR (cb) - Compact binary format</li>
+	<li>MessagePack (mp) - Efficient binary serialization</li>
+	<li>register formats with the <code>registerFormat</code> API</li>
+	<li>use available formats based on application needs</li>
+</ul>
+</div>
+</section>
+
+
+</section>
+
+<section profile>
+<h2>Token Performance</h2>
+<token-profile>
+	<h3 slot="format">Format Comparison</h3>
+	<h3 slot="hwt-jwt">HWT vs JWT Comparison</h3>
+</token-profile>
+<p>Profiling the combined token creation+verify operations complete well below 1 millisecond, testing with a range of payload sizes, all of the hash options and included formats. Note that items like BigInt that throw in JSON stringify are converted before profiling only for the token creators that cannot handle these types. Each profile run outputs results to the console for taking a closer look, allowing inspecting restored types like Dates, BigInt, TypedArrays, etc. depending on the payload selected.</p>
+</section>
+
+<section id="license">
+	<h2>License</h2>
+<p>Hwtr and HWT are licensed under the Apache-2.0 - see the <a href="./LICENSE">LICENSE</a> file for details. </p>
+<p> Copyright © 2025 Jim Montgomery
+</p>
+</section>
+</main>
+
+<footer>
+<nav> Hwtr - HMAC Web Tokens (HWT) -
+	<a href="https://github.com/jimmont/hwtr" target="_blank">GitHub</a> 
+	- © 2025 Jim Montgomery - <a href="./LICENSE">Apache-2.0</a>
+</nav>
+</footer>
+
+<script type=module>
+import './components.js';
+
+import Hwtr from './hwtr.js';
+import {formats} from './hwtr.formats.js';
+Hwtr.registerFormat('j', formats.j);
+Hwtr.registerFormat('jx', formats.jx);
+
+const keys = await Hwtr.generateKeys();
+const hwtr = await Hwtr.factory(keys);
+let jwtr = null;
+const tokenFactory = {};
+
+document.addEventListener('token-input', async ({type, detail})=>{
+
+	const {expires, visible, hidden} = detail;
+	const expiresAt = Math.round(Date.now() / 1000 + expires);
+	const hwt = await hwtr.createWith(expires, visible, hidden);
+
+	const payload = {expires, expiresAt, visible, hidden, hwt, hwtr, tokenFactory};
+
+	globalThis.dispatchEvent(new CustomEvent('token', {detail: payload, cancelable: true, composed: true, bubbles: true}));
+
+	document.querySelector('[example]:nth-of-type(2)').textContent = hwt;
+
+	console.log(type, {type, expiresAt, detail, jwtr, hwtr});
+});
+
+console.log(`
+// keys look like this
+const keys = {current:'k1',keys:[{id:'k1',secret:'...32.bytes.or.more.more.litte.more..........secrets.and.stuff.and.things....', created:Date.now()}]}
+
+// maybe they load in from some config
+const keys = JSON.parse(env.secret_keys);
+
+// and maybe we just need keys for a test run
+const keys = await Hwtr.generateKeys();
+`, {keys});
+
+const data = {
+	visible: {user: 'Norman Borlaugh', id: '7890'},
+	hidden: {"deviceId": "abc123", "ip": "192.168.1.1"}	
+};
+
+requestAnimationFrame(async ()=>{
+	try{
+		jwtr = await Jwtr(keys);
+		// same hash, etc as HWT
+		tokenFactory.jwt = jwtr;
+		await formatsDemo();
+	}catch(error){
+		console.error(error);
+	}
+	const formats = Hwtr.formats;
+	for(const format of formats){
+		// use defaults for simple profiling, only vary format, similar to/same as jwt
+		tokenFactory[format] = await Hwtr.factory(keys, {format});
+	}
+	// init, kick-off some side-effects in the ui, including profiling
+	document.querySelector('token-input').data = data;
+});
+
+async function formatsDemo(){
+	const { cbor, msgpack } = await import('./hwtr.codecs.js');
+	Hwtr.registerFormat('mp', msgpack);
+	Hwtr.registerFormat('cb', cbor);
+}
+
+async function Jwtr(keys){
+	const secret = keys?.keys?.[0]?.secret ?? 'your-secret-key';
+
+	const jose = await import('https://cdn.jsdelivr.net/npm/jose@6.0.10/dist/webapi/index.min.js');
+
+	const key = await jose.importJWK({
+			kty: 'oct',
+			k: jose.base64url.encode(new TextEncoder().encode(secret)),
+			alg: 'HS256',
+		}, 'HS256');
+
+	return {
+		// JWT discarding hidden payload:
+		createWith(expiresAt, payload, hidden){
+			return new jose.SignJWT(payload)
+				.setProtectedHeader({ alg: 'HS256' })
+				.setExpirationTime(expiresAt)
+				.sign(key);
+		},
+		verify(token){
+			return jose.jwtVerify(token, key);
+		}
+	};
+}
+</script>
+</body>
+</html>
