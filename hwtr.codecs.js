@@ -15,7 +15,7 @@
 
 // example MessagePack Encoder
 // https://github.com/msgpack/msgpack-javascript
-import * as MessagePack from "https://unpkg.com/@msgpack/msgpack@3.1.1/dist.esm/index.mjs?module";
+import * as MessagePack from "https://esm.sh/@msgpack/msgpack";
 
 export const msgpack = {
 	encode(data) {
@@ -44,7 +44,7 @@ console.log(`MessagePack looks ${ mpGood ? 'good':'bad' }`, {mpSample, mpSampleE
 
 // https://github.com/hildjj/cbor2
 // in Deno
-import * as CBOR from 'https://unpkg.com/cbor2/lib/index.js?module';
+import * as CBOR from "https://esm.sh/cbor2";
 // in cloudflare workers, nodejs
 // npm install cbor2
 // import * as CBOR from 'cbor2';

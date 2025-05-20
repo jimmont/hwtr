@@ -3,7 +3,7 @@
  * Copyright 2025 Jim Montgomery
  * SPDX-License-Identifier: Apache-2.0
  * */
-import Hwtr from './hwtr.js';
+import Hwtr, { timingSafeEqual, bufferToBase64Url, base64urlToUint8Array } from './hwtr.js';
 import { formats, codecJSON, codecJSONextended } from './hwtr.formats.js';
 for(const fmt in formats){
 	Hwtr.registerFormat(fmt, formats[fmt]);
@@ -169,7 +169,25 @@ Deno.test('Hwtr decode method', async () => {
 });
 
 Deno.test('Hwtr formats and codecs for JSON, CBOR and MessagePack', async ()=>{
-	const {cbor, msgpack} = await import('./hwtr.codecs.js').catch(console.error);
+/* NOTE Deno requires allow-import, ie `deno test --allow-import` 
+ * 	because hwtr.codecs.js has external imports for MessagePack and CBOR 
+ * 	OTHERWISE THIS TEST WILL FAIL
+ * 	*/
+	const {cbor, msgpack} = await import('./hwtr.codecs.js').catch(async (res)=>{
+		if(globalThis.Deno && Deno.args && !/-(?:allow-import|allow-all|A)\b/.test(Deno.args.join(' '))){
+			const NOTE = `
+NOTE Deno requires allow-import
+like 'deno test --allow-import'
+because hwtr.codecs.js has external imports for MessagePack and CBOR,
+otherwise this test will fail
+			`;
+			console.warn(NOTE);
+			assert(false, NOTE);
+		}else{
+			assert(false, new Error(`problem importing external libraries for test ${ res }`, {cause:res}));
+		}
+		console.error(res);
+	});
 
 	let codecs = new Set(Hwtr.formats);
 	assert(codecs.has('j'), `default formats for JSON j`);
@@ -1117,19 +1135,19 @@ Deno.test('Hwtr timingSafeEqual for timing-safe equality tests', async () => {
 	// Test timing-safe comparison with identical values
 	const a = new TextEncoder().encode("test-value");
 	const b = new TextEncoder().encode("test-value");
-	const result = await hwtr.timingSafeEqual(a, b);
+	const result = await timingSafeEqual(a, b);
 	assert(result === true, "Should return true for identical values");
 	
 	// Test timing-safe comparison with different values of same length
 	const c = new TextEncoder().encode("test-value");
 	const d = new TextEncoder().encode("test-wrong");
-	const result2 = await hwtr.timingSafeEqual(c, d);
+	const result2 = await timingSafeEqual(c, d);
 	assert(result2 === false, "Should return false for different values");
 	
 	// Test timing-safe comparison with different lengths
 	const e = new TextEncoder().encode("short");
 	const f = new TextEncoder().encode("longer-value");
-	const result3 = await hwtr.timingSafeEqual(e, f);
+	const result3 = await timingSafeEqual(e, f);
 	assert(result3 === false, "Should return false for different lengths");
 
 	// Generate a signature
@@ -1138,17 +1156,17 @@ Deno.test('Hwtr timingSafeEqual for timing-safe equality tests', async () => {
 	
 	// Test with same signature (should match)
 	const sameSignature = await hwtr.generate(data);
-	const result1 = await hwtr.timingSafeEqual(signature.join('.'), sameSignature.join('.'));
+	const result1 = await timingSafeEqual(signature.join('.'), sameSignature.join('.'));
 	assert(result1 === true, "Same signatures should verify successfully");
 	
 	// Test with different signature (should not match)
 	const differentSignature = await hwtr.generate("different-data");
-	const result7 = await hwtr.timingSafeEqual(signature[0], differentSignature[0]);
+	const result7 = await timingSafeEqual(signature[0], differentSignature[0]);
 	assert(result7 === false, "Different signatures should not verify");
 	
 	// Test with Uint8Array and string signatures
 	const signatureBuffer = Hwtr.base64urlToUint8Array(signature[0]);
-	const result8 = await hwtr.timingSafeEqual(signature[0], signatureBuffer);
+	const result8 = await timingSafeEqual(signature[0], signatureBuffer);
 	assert(result8 === true, `String and Uint8Array signatures should be considered equal directly ${ result3 }`);
 });
 

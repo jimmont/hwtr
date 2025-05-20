@@ -75,6 +75,70 @@ const keys = await Hwtr.generateKeys();
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
+export function timingSafeEqual(expected, actual) {
+	const a = typeof expected === 'string' ? 
+		base64urlToUint8Array(expected) : expected;
+	const b = typeof actual === 'string' ? 
+		base64urlToUint8Array(actual) : actual;
+	if (a.length !== b.length) return false;
+	// always check ALL bytes regardless
+	let result = 0;
+	for (let i = 0, len = a.length; i < len; i++) {
+		result |= a[i] ^ b[i];  // Bitwise XOR and OR
+	}
+	return result === 0;
+}
+
+export function bufferToBase64Url(buffer) {
+	const uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+	
+	// Process in chunks to avoid stack overflow
+	const CHUNK_SIZE = 4096;
+	let binary = '';
+	for (let i = 0, len = uint8Array.length; i < len; i += CHUNK_SIZE) {
+		const chunk = uint8Array.subarray(i, Math.min(i + CHUNK_SIZE, len));
+		binary += String.fromCharCode.apply(null, chunk);
+	}
+	
+	return btoa(binary).replace(/[+/=]/g, c => c === '+' ? '-' : c === '/' ? '_' : '');
+}
+
+// Create a static dummy buffer for error cases and dummy work in timing-safe comparison
+const emptyArray = new Uint8Array(0);
+export function base64urlToUint8Array(base64url) {
+	if (base64url instanceof Uint8Array) {
+		return base64url;
+	}
+
+	let bytes = null;
+	try {
+		let base64 = base64url.replace(/[-_]/g, c => c === '-' ? '+' : '/');
+		//let base64 = base64url.replaceAll('-', '+').replaceAll('_', '/');
+
+		const paddingNeeded = (4 - (base64.length % 4)) % 4;
+		if (paddingNeeded) {
+			base64 += '='.repeat(paddingNeeded);
+		}
+
+		const binaryStr = atob(base64);
+		const len = binaryStr.length;
+		bytes = new Uint8Array(len);
+		for (let i = 0; i < len; i++) {
+			bytes[i] = binaryStr.charCodeAt(i);
+		}
+
+		return bytes;
+	} catch(error) {
+		// Clear the allocated buffer if an error occurs
+		if (bytes) {
+			Hwtr.clearBuffer(bytes);
+		}
+		// For security and support constant-time validation 
+		// always return a predictable failure result
+		return emptyArray;
+	}
+}
+
 export default class Hwtr {
 	#errorOnInvalid = false;
 	#errorOnExpired = false;
@@ -228,7 +292,7 @@ export default class Hwtr {
 			len = secret.length;
 			if(len < min){
 				const random = crypto.getRandomValues(new Uint8Array(len));
-				secret += Hwtr.bufferToBase64Url(random);
+				secret += bufferToBase64Url(random);
 			}
 		}else if(typeof secret?.byteLength === 'number'){
 			const sourceView = Hwtr.toUint8Array(secret);
@@ -245,7 +309,7 @@ export default class Hwtr {
 			}
 		}
 		if(secret.byteLength && asString){
-			secret = this.bufferToBase64Url(secret);
+			secret = bufferToBase64Url(secret);
 		}
 
 		// human readable time
@@ -359,64 +423,17 @@ export default class Hwtr {
 	}
 
 	static textToBase64Url(text){
-		return Hwtr.bufferToBase64Url( textEncoder.encode(text) );
+		return bufferToBase64Url( textEncoder.encode(text) );
 	}
 
 	static base64urlToText(base64url) {
-		return textDecoder.decode( Hwtr.base64urlToUint8Array( base64url ) );
+		return textDecoder.decode( base64urlToUint8Array( base64url ) );
 	}
 
-	static base64urlToUint8Array(base64url) {
-		if (base64url instanceof Uint8Array) {
-			return base64url;
-		}
-
-		let bytes = null;
-		try {
-			let base64 = base64url.replace(/[-_]/g, c => c === '-' ? '+' : '/');
-			//let base64 = base64url.replaceAll('-', '+').replaceAll('_', '/');
-
-			const paddingNeeded = (4 - (base64.length % 4)) % 4;
-			if (paddingNeeded) {
-				base64 += '='.repeat(paddingNeeded);
-			}
-
-			const binaryStr = atob(base64);
-			const len = binaryStr.length;
-			bytes = new Uint8Array(len);
-			for (let i = 0; i < len; i++) {
-				bytes[i] = binaryStr.charCodeAt(i);
-			}
-
-			return bytes;
-		} catch(error) {
-			// Clear the allocated buffer if an error occurs
-			if (bytes) {
-				Hwtr.clearBuffer(bytes);
-			}
-			// For security and support constant-time validation 
-			// always return a predictable failure result
-			return Hwtr.#emptyArray;
-		}
-	}
-
-	// Create a static dummy buffer for error cases and dummy work in timing-safe comparison
-	static #emptyArray = new Uint8Array(0);
+	static base64urlToUint8Array = base64urlToUint8Array;
 
 	// convert ArrayBuffer to base64url
-	static bufferToBase64Url(buffer) {
-		const uint8Array = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
-		
-		// Process in chunks to avoid stack overflow
-		const CHUNK_SIZE = 4096;
-		let binary = '';
-		for (let i = 0, len = uint8Array.length; i < len; i += CHUNK_SIZE) {
-			const chunk = uint8Array.subarray(i, Math.min(i + CHUNK_SIZE, len));
-			binary += String.fromCharCode.apply(null, chunk);
-		}
-		
-		return btoa(binary).replace(/[+/=]/g, c => c === '+' ? '-' : c === '/' ? '_' : '');
-	}
+	static bufferToBase64Url = bufferToBase64Url;
 
 	separator = '.';
 
@@ -469,13 +486,13 @@ export default class Hwtr {
 	async _createWith(exp, dataShown, dataHidden){
 		const { format, separator } = this;
 		const codec = Hwtr.#codecs[format];
-		const item = Hwtr.bufferToBase64Url( codec.encode(dataShown) );
+		const item = bufferToBase64Url( codec.encode(dataShown) );
 		// sig.keyid.exp.format.payload
 		const payload = [exp, format, item];
 		let hidden;
 		if(dataHidden !== undefined){
 		// NOTE NO HIDDEN IN PAYLOAD
-			const itemHidden = Hwtr.bufferToBase64Url( codec.encode(dataHidden) );
+			const itemHidden = bufferToBase64Url( codec.encode(dataHidden) );
 			// exp.format.payload.hidden
 			hidden = [...payload, itemHidden];
 		}
@@ -509,7 +526,7 @@ export default class Hwtr {
 		}
 
 		try {
-			result.data = codec.decode( Hwtr.base64urlToUint8Array( dataShown ) );
+			result.data = codec.decode( base64urlToUint8Array( dataShown ) );
 		} catch (decodeError) {
 			result.error = `hwt data decoding failed`;
 		}
@@ -574,7 +591,7 @@ export default class Hwtr {
 			// exp.format.payload
 			if (dataHidden !== undefined) {
 			// exp.format.payload.hidden
-				const itemHidden = Hwtr.bufferToBase64Url( codec.encode(dataHidden) );
+				const itemHidden = bufferToBase64Url( codec.encode(dataHidden) );
 				hidden.push( itemHidden );
 			}
 		} catch (error) {
@@ -596,7 +613,7 @@ export default class Hwtr {
 		}
 		// generate signature for comparison
 		const [resign] = await this.generate(hidden.join(separator), { key });
-		result.ok = this.timingSafeEqual(sig, resign);
+		result.ok = timingSafeEqual(sig, resign);
 
 		if (!result.ok) {
 			result.error = `hwt invalid signature`;
@@ -610,7 +627,7 @@ export default class Hwtr {
 		try {
 			// ALWAYS send Uint8Array buffer to decode from base64url string
 			// each can convert to text with textDecoder.decode( buffer )
-			result.data = codec.decode( Hwtr.base64urlToUint8Array( dataShown ) );
+			result.data = codec.decode( base64urlToUint8Array( dataShown ) );
 		} catch (decodeError) {
 			result.data = null;
 			result.ok = false;
@@ -619,21 +636,9 @@ export default class Hwtr {
 
 		return result;
 	}
-
+	
 	// constant-time comparison
-	timingSafeEqual(expected, actual) {
-		const a = typeof expected === 'string' ? 
-			Hwtr.base64urlToUint8Array(expected) : expected;
-		const b = typeof actual === 'string' ? 
-			Hwtr.base64urlToUint8Array(actual) : actual;
-		if (a.length !== b.length) return false;
-		// always check ALL bytes regardless
-		let result = 0;
-		for (let i = 0, len = a.length; i < len; i++) {
-			result |= a[i] ^ b[i];  // Bitwise XOR and OR
-		}
-		return result === 0;
-	}
+	static timingSafeEqual = timingSafeEqual;
 
 	async generate(text, options={}) {
 		const { separator } = this;
@@ -650,7 +655,7 @@ export default class Hwtr {
 				dataBuffer
 			);
 
-			let sig = Hwtr.bufferToBase64Url(hmac);
+			let sig = bufferToBase64Url(hmac);
 			if(signatureSize) {
 				sig = sig.slice(0, signatureSize);
 			}
