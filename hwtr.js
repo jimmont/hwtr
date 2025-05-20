@@ -131,13 +131,26 @@ export function base64urlToUint8Array(base64url) {
 	} catch(error) {
 		// Clear the allocated buffer if an error occurs
 		if (bytes) {
-			Hwtr.clearBuffer(bytes);
+			clearBuffer(bytes);
 		}
 		// For security and support constant-time validation 
 		// always return a predictable failure result
 		return emptyArray;
 	}
 }
+
+// securely clear a buffer by overwriting with zeros
+export function clearBuffer(buffer) {
+	if (buffer instanceof Uint8Array) {
+		crypto.getRandomValues(buffer); // First overwrite with random data
+		buffer.fill(0); // Then zero out
+	}
+}
+
+export function toUint8Array(typedArray) {
+	return new Uint8Array(typedArray.buffer, typedArray.byteOffset, typedArray.byteLength);
+}
+
 
 export default class Hwtr {
 	#errorOnInvalid = false;
@@ -272,14 +285,11 @@ export default class Hwtr {
 		} finally {
 			// Clear the buffer containing the secret after use
 			if (bfr) {
-				Hwtr.clearBuffer(bfr);
+				clearBuffer(bfr);
 			}
 		}
 	}
 
-	static toUint8Array(typedArray) {
-		return new Uint8Array(typedArray.buffer, typedArray.byteOffset, typedArray.byteLength);
-	}
 	static generateKey({id='keyid', secret=0}={}, asString=true){
 		let len, min = 32;
 		if(typeof secret === 'number'){
@@ -295,7 +305,7 @@ export default class Hwtr {
 				secret += bufferToBase64Url(random);
 			}
 		}else if(typeof secret?.byteLength === 'number'){
-			const sourceView = Hwtr.toUint8Array(secret);
+			const sourceView = toUint8Array(secret);
 			const resultLength = Math.max(sourceView.length, min);
 			if(sourceView.length < min){
 				const result = new Uint8Array(resultLength);
@@ -394,14 +404,6 @@ export default class Hwtr {
 		}
 	
 		this.#keys.current = curr;
-	}
-
-	// Method to securely clear a buffer by overwriting with zeros
-	static clearBuffer(buffer) {
-		if (buffer instanceof Uint8Array) {
-			crypto.getRandomValues(buffer); // First overwrite with random data
-			buffer.fill(0); // Then zero out
-		}
 	}
 
 	/* static factory for making HWT tokens, 
@@ -670,7 +672,7 @@ export default class Hwtr {
 		} finally {
 			// Clear data buffer after use
 			if (dataBuffer) {
-				Hwtr.clearBuffer(dataBuffer);
+				clearBuffer(dataBuffer);
 			}
 		}
 	}
