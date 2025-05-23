@@ -1,12 +1,12 @@
 /*
- * Hwtr - a utility for making and using HMAC Web Tokens (HWT)
+ * Hwtr - a utility for making and using Hash-based Web Tokens (HWT)
  *
  * @license
  * Copyright 2025 Jim Montgomery
  * SPDX-License-Identifier: Apache-2.0
  *
  *
- * HMAC Web Tokens (HWT) are base64url signed tokens for Web contexts
+ * Hash-based Web Tokens (HWT) are base64url signed tokens for Web contexts
  * 10-40% smaller than JWT's
  * custom formats for payloads including JSON and JSON extended (Date, BigInt, Map, Set, TypedArrays), 
  * additional examples of custom formats and codecs using CBOR and MessagePack
@@ -22,13 +22,14 @@
  * intended for use in Cloudflare Workers, Deno, Nodejs
  *
  * hwt looks like:
-	"hwt.HMAC-signature.key-id.expires-in-seconds-since-epoch.format-abbreviation.data-payoad"
+	"hwt.hash-signature.key-id.expires-in-seconds-since-epoch.format-abbreviation.data-payoad"
 	"hwt.signature.keyid.1234567890.j.payload1234",
 
 		- hwt is the standard prefix
-		- signature is base64url HMAC of both the included data payload together with any hidden input
-		- keyid is the key used to create the HMAC
-		- expires is the UNIX time in seconds that the token expires, also in the HMAC signature
+		- signature can be HMAC (symmetric) or ECDSA (asymmetric) based on key type
+		- signature is base64url hash of both the included data payload together with any hidden input
+		- keyid is the key used to create the hash 
+		- expires is the UNIX time in seconds that the token expires, also in the hash signature
 		- data is the remainder of the payload input, without any of the hidden input 
  *
  * sample usage:
@@ -407,7 +408,7 @@ export default class Hwtr {
 	}
 
 	/* static factory for making HWT tokens, 
-	 * creates the "Hwtr" that stamps out HWT's (HMAC Web Tokens) */
+	 * creates the "Hwtr" that stamps out HWT's (Hash-based Web Tokens) */
 	static async factory(keys, options){
 		return new Hwtr(keys, options).ready();
 	}

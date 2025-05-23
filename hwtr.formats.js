@@ -1,5 +1,5 @@
 /*
- * codecs used as formats for HMAC Web Tokens (HWT)
+ * codecs used as formats for HWT (Hash-based Web Tokens)
  *
  * @license
  * Copyright 2025 Jim Montgomery
